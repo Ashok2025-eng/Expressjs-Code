@@ -1,125 +1,193 @@
 // GET all users
 // route: GET /users
 
-let users = [];
-export const getAllUsers = (req, res) => {
-  // req.query holds optional filters/settings sent after "?" in the URL
-  // e.g. /users?name=john&limit=10&page=1&sort=ascnd
-  const { name, limit, page, sort } = req.query;
-  console.log(req.query);
-  const user = users.find((user) => user._id === Number(id));
+import mongoose from "mongoose";
 
-  if (!user) {
-    res.json({
-      message: `user:${id} not found`,
-      status: "fail",
+// Mongoose Schema Configuration
+const userSchema = new mongoose.Schema(
+  {
+    full_name: {
+      type: String,
+      required: true,
+      minLength: 3,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: ["USER", "ADMIN"], // Fixed: Changed "emum" typo to "enum"
+      default: "USER",
+    },
+  },
+  { timestamps: true },
+);
+
+// Creating collection/model
+const User = mongoose.model("user", userSchema);
+
+// 1. GET ALL USERS
+export const getAllUsers = async (req, res) => {
+  try {
+    const allUsers = await User.find();
+    console.log(req.query);
+
+    res.status(200).json({
+      message: "all user fetched",
+      success: true,
+      status: "success",
+      data: allUsers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error?.message ?? "Something went wrong",
       success: false,
+      status: "error",
       data: null,
     });
-    return;
   }
-
-  // later: use name/limit/page/sort to filter/paginate/sort real data from a database
-  // for now: just returning a fixed, hardcoded list of users
-
-  res.json({
-    message: "all user fetched",
-    success: true,
-    status: "success",
-    data: [
-      {
-        _id: 1,
-        name: "john doe",
-        email: "john123@gmail.com",
-        password: "123456",
-      },
-      {
-        _id: 2,
-        name: "jack doe",
-        email: "jack123@gmail.com",
-        password: "1234567",
-      },
-    ],
-  });
 };
 
-// GET one user by id
-// route: GET /users/:id
-export const getUserById = (req, res) => {
-  // req.params holds values captured from the URL path itself
-  // e.g. /users/5  ->  req.params.id = "5"
-  const { id } = req.params;
+// 2. GET ONE USER BY ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
 
-  // later: look up the real user with this id from a database
-  // for now: just returning fixed/fake user data, using the id passed in
+    if (!user) {
+      res.status(404).json({
+        // Added 404 status and return statement
+        message: `user:${id} not found`,
+        status: "fail",
+        success: false,
+        data: null,
+      });
+      return;
+    }
 
-  res.json({
-    message: `user:${id} fetched`,
-    status: "success",
-    success: true,
-    data: [
-      {
-        _id: id,
-        name: "johnnnnnn doe",
-        email: "john123@gmail.com",
-        password: "123456",
-      },
-    ],
-  });
+    res.status(200).json({
+      message: `user:${id} fetched`,
+      status: "success",
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    // Fixed: Changed "eror" typo to "error"
+    res.status(500).json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: "error",
+      data: null,
+    });
+  }
 };
 
-// CREATE a new user
-// route: POST /users
-export const createUser = (req, res) => {
-  // req.body holds the data sent by the client in the request body
-  // e.g. { name: "Ashok", email: "...", password: "..." }
-  console.log(req.body);
+// 3. CREATE A NEW USER
+export const createUser = async (req, res) => {
+  try {
+    const { full_name, email, password } = req.body;
+    const user = await User.create({ full_name, email, password });
 
-  // build a new user object:
-  // spread whatever was sent in req.body, and manually add an _id
-  // later: this _id would come from the database instead of being hardcoded
-  const user = { _id: users.length + 1, ...req.body };
-
-  users.push(user);
-
-  res.json({
-    data: user,
-    message: "user created",
-    status: "success",
-    success: true,
-  });
+    res.status(201).json({
+      data: user,
+      message: "user created",
+      status: "success",
+      success: true,
+    });
+  } catch (error) {
+    res.status(400).json({
+      // Changed to 400 for bad requests (validation/duplicate email)
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: "error",
+      data: null,
+    });
+  }
 };
 
-// UPDATE a user by id
-// route: PUT /users/:id
-// UPDATE a user by id
-// route: PUT /users/:id
-export const updateUser = (req, res) => {
-  const { id } = req.params;
-  console.log(req.body);
+// 4. UPDATE A USER BY ID
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
 
-  const updatedUser = {
-    _id: id,
-    ...req.body,
-  };
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
-  res.json({
-    data: updatedUser,
-    message: `User ${id} updated`,
-    status: "success",
-    success: true,
-  });
+    if (!updatedUser) {
+      // Fixed: Changed "!user" to "!updatedUser"
+      res.status(404).json({
+        // Added return and 404 status
+        message: `user ${id} not found`,
+        status: "fail",
+        success: false,
+        data: null,
+      });
+      return;
+    }
+
+    // Removed Object.assign(user, req.body) since findByIdAndUpdate already handles database writes
+
+    res.status(201).json({
+      // Changed from 201 to 200 (standard for updates)
+      data: updatedUser,
+      message: `User ${id} updated`,
+      status: "success",
+      success: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: "fail",
+      data: null,
+    });
+  }
 };
 
 // DELETE a user by id
 // route: DELETE /users/:id
-export const deleteUser = (req, res) => {
-  const { id } = req.params;
 
-  res.json({
-    message: `User ${id} deleted`,
-    success: true,
-    status: "success",
-    data: null,
-  });
-};
+//todo findbyid and delete
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleteUser = await User.findByIdAndDelete(id);
+
+    if (!deleteUser) {
+      res.json({
+        message: `User ${id} not found`,
+        success: false,
+        status: "fail",
+        data: null,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: `User ${id} deleted`,
+      success: true,
+      status: "success",
+      data: deleteUser,
+    });
+  } catch (error) {
+    // The catch block is now correctly inside the function
+    res.status(500).json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: "fail",
+      data: null,
+    });
+  }
+}; // The function closes here at the very end

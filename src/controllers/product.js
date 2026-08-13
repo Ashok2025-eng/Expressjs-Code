@@ -1,95 +1,203 @@
 //* get all
-export const getAllProducts = (req, res) => {
-  const { ProductName, limit, page, sort } = req.query;
-  console.log(req.query);
 
-  res.json({
-    message: "all product fetched",
-    success: true,
-    status: "success",
-    data: [
-      {
-        _id: 1,
-        ProductName: "shoe",
-        price: 13000,
-        size: 39,
-      },
-      {
-        _id: 2,
-        ProductName: "T-Shirt",
-        price: 2000,
-        size: "xl",
-      },
-    ],
-  });
+import mongoose from "mongoose";
+
+let products = [
+  {
+    _id: 1,
+    productName: "shoe",
+    price: 13000,
+    size: 39,
+  },
+  {
+    _id: 2,
+    productName: "T-Shirt",
+    price: 2000,
+    size: "xl",
+  },
+];
+
+const productSchema = new mongoose.Schema(
+  {
+    productName: {
+      type: String,
+      required: true,
+      minLength: 3,
+      trim: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+    },
+    size: {
+      type: String,
+    },
+  },
+  { timestamps: true },
+);
+
+const PRODUCT = mongoose.model("PRODUCT", productSchema);
+export const getAllProducts = async (req, res) => {
+  try {
+    const allProduct = await PRODUCT.find();
+    const { name, limit, page, sort } = req.query;
+    console.log(req.query);
+
+    res.status(200).json({
+      message: "all product fetched",
+      success: true,
+      status: "success",
+      data: allProduct,
+    });
+  } catch (error) {
+    res.json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: error?.status ?? "error",
+      data: null,
+    });
+  }
 };
 
 //* get by id
-export const getProductById = (req, res) => {
-  const { id } = req.params;
-  // find product by id from db
-  // res.send(`<h1>Products by ${id} fetched</h1>`);
-  res.json({
-    message: `Products:${id} fetched`,
-    status: "success",
-    success: true,
-    data: [
-      {
-        _id: id,
-        ProductName: "Pant",
-        price: 3000,
-        size: 30,
-      },
-    ],
-  });
+export const getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await PRODUCT.findById(id);
+
+    // find product by id from db
+    // res.send(`<h1>Products by ${id} fetched</h1>`);
+
+    // const product = products.find((product) => product._id === Number(id));
+    if (!product) {
+      res.status(404).json({
+        message: `Product:${id} not found`,
+        status: "success",
+        success: true,
+        data: null,
+      });
+      return;
+    }
+    res.status(200).json({
+      message: `Products:${id} fetched`,
+      status: "success",
+      success: true,
+      data: product,
+    });
+  } catch (error) {
+    res.json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: error?.status ?? "error",
+      data: null,
+    });
+  }
 };
 
 //* create
-export const createProduct = (req, res) => {
-  // insert new product on db
-  // res.send(`<h1>Products created</h1>`);
-  console.log(req.body);
-  const product = {
-    _id: 1,
-    ...req.body,
-  };
+export const createProduct = async (req, res) => {
+  try {
+    const { productName, price, size } = req.body;
+    const product = await PRODUCT.create({ productName, price, size });
+    // insert new product on db
+    // res.send(`<h1>Products created</h1>`);
+    console.log(req.body);
+    // const product = { ...req.body, _id: products.length + 1 };
+    // products.push(product);
 
-  res.json({
-    data: product,
-    message: "product created",
-    status: "success",
-    success: true,
-  });
+    res.status(201).json({
+      data: product,
+      message: "product created",
+      status: "success",
+      success: true,
+    });
+  } catch (error) {
+    res.json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: error?.status ?? "error",
+      data: null,
+    });
+  }
 };
 
 //* update
-export const updateProduct = (req, res) => {
-  const { id } = req.params;
-  // update product
-  // res.send(`<h1>Products:${id} updated</h1>`);
-  console.log(req.body);
-  const updatedProduct = {
-    _id: id,
-    ...req.body,
-  };
-  res.json({
-    data: updatedProduct,
-    message: `Product ${id} updated`,
-    status: "success",
-    success: true,
-  });
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // update product
+    // res.send(`<h1>Products:${id} updated</h1>`);
+    const updateData = req.body;
+    // const updatedProduct = {
+    //   _id: id,
+    //   ...req.body,
+    // };
+
+    const updatedProduct = await PRODUCT.findByIdAndUpdate(
+      id,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updateProduct) {
+      res.status(404).json({
+        message: `Product:${id} not found`,
+        status: "fail",
+        success: false,
+        data: null,
+      });
+    }
+    res.status(201).json({
+      data: updatedProduct,
+      message: `Product ${id} updated`,
+      status: "success",
+      success: true,
+    });
+  } catch (error) {
+    res.json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: error?.status ?? "error",
+      data: null,
+    });
+  }
 };
 
 //* delete
-export const deleteProduct = (req, res) => {
-  const { id } = req.params;
-  // delete product from db
-  // res.send(`<h1>Products:${id} deleted</h1>`);
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // delete product from db
+    // res.send(`<h1>Products:${id} deleted</h1>`);
 
-  res.json({
-    message: "`Product ${id}deleted`",
-    success: true,
-    status: "success",
-    data: null,
-  });
+    const deleteProduct = await PRODUCT.findByIdAndDelete(id);
+
+    if (!deleteProduct) {
+      res.status(404).json({
+        message: `Product ${id} not found`,
+        success: false,
+        status: "fail",
+        data: null,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "`Product ${id}deleted`",
+      success: true,
+      status: "success",
+      data: null,
+    });
+  } catch (error) {
+    res.json({
+      message: error?.message ?? "Something went wrong",
+      success: false,
+      status: "fail",
+      data: null,
+    });
+  }
 };
