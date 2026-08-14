@@ -1,38 +1,13 @@
 // GET all users
 // route: GET /users
-
 import mongoose from "mongoose";
 
+import User from "../models/users.model.js";
+
 // Mongoose Schema Configuration
-const userSchema = new mongoose.Schema(
-  {
-    full_name: {
-      type: String,
-      required: true,
-      minLength: 3,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    role: {
-      type: String,
-      enum: ["USER", "ADMIN"], // Fixed: Changed "emum" typo to "enum"
-      default: "USER",
-    },
-  },
-  { timestamps: true },
-);
 
 // Creating collection/model
-const User = mongoose.model("user", userSchema);
+// const User = mongoose.model("user", userSchema);
 
 // 1. GET ALL USERS
 export const getAllUsers = async (req, res) => {

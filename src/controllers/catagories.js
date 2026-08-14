@@ -1,24 +1,6 @@
 //* get all
 
-import mongoose from "mongoose";
-
-const categorySchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      minLength: 3,
-      trim: true,
-    },
-    description: {
-      type: String,
-      maxLength: 50,
-    },
-  },
-  { timestamps: true },
-);
-
-const Category = mongoose.model("category", categorySchema);
+import Category from "../models/category.models.js";
 
 export const getAllCategory = async (req, res) => {
   try {

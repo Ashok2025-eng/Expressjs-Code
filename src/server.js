@@ -10,6 +10,38 @@ const app = express();
 const PORT = 8080;
 
 app.use(express.json());
+
+//! Midlleware
+const middleware = (req, res, next) => {
+  console.log("middleware 1", req.path);
+  next();
+};
+app.use(middleware);
+app.use((req, res, next) => {
+  console.log("middleware 2");
+  req.user = {
+    name: "john",
+  };
+  next();
+});
+
+app.use((req, res, next) => {
+  console.log("middleware 3");
+  console.log(req.user);
+  if (!req.user) {
+    res.status(500).json({
+      message: "unauthorized access denied",
+    });
+  } else {
+    next();
+  }
+});
+app.use((req, res, next) => {
+  console.log("middleware4");
+  console.log(req.user);
+  next();
+});
+
 //* using routes
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
@@ -81,6 +113,26 @@ mongoose
 // table                collection
 //row                   document
 //column                fields
+
+//* Middleware
+
+//client ->req ->serer->controller
+//req ,res obj and next function
+// req ->mid1 ->mid2 ->mid3-> controller
+
+// what can we do form middleware
+//? can execute any code/logic
+//? CQN MODIFY REQ AND RES OBJ
+//? CALL NEXT MIDDLEWARE
+//? CAN END REQ-RES CYCLE
+
+//* WHY USE MIDDLEWARE
+//to solve the duplicated common logic creating middleware(like auth) in between req -> middleware -> controller'
+
+//* types of middleware
+//1 application level
+//2 route level
+//3 error hndler level
 
 const server = http.createServer(app);
 // });
